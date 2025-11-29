@@ -118,9 +118,6 @@ export default function ConverterPage() {
       <div className="container" style={{ paddingBottom: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
-            <p className="badge badge-neutral" style={{ marginBottom: 8 }}>
-              App
-            </p>
             <h2 style={{ fontSize: 34 }}>Converter</h2>
             <p className="muted-text">Paste, upload, and scale in one focused workspace.</p>
           </div>
