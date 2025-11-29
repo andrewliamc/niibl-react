@@ -9,7 +9,7 @@ export default function Footer() {
       >
         <LogoWordmark size="md" withTagline />
         <div className="muted-text" style={{ fontSize: 13 }}>
-          Niibl · Just A Bite · 2024
+          Niibl · Just A Bite · 2025
         </div>
       </div>
     </footer>
