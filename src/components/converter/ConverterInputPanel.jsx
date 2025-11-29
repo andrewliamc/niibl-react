@@ -9,13 +9,19 @@ export default function ConverterInputPanel({
   recipeText,
   onRecipeTextChange,
   onFileChange,
+  ocrStatus,
+  ocrError,
   originalServings,
   targetServings,
   onOriginalChange,
   onTargetChange,
   onConvert,
   isLoading,
+  isOcrRunning,
 }) {
+  const isDisabled = isLoading || isOcrRunning
+  const buttonLabel = isOcrRunning ? 'Processing upload...' : isLoading ? 'Converting...' : 'Convert Recipe'
+
   return (
     <div className="card" style={{ display: 'grid', gap: 16 }}>
       <div className="converter-header">
@@ -31,6 +37,9 @@ export default function ConverterInputPanel({
         textValue={recipeText}
         onTextChange={onRecipeTextChange}
         onFileChange={onFileChange}
+        ocrStatus={ocrStatus}
+        ocrError={ocrError}
+        isOcrRunning={isOcrRunning}
       />
 
       <div>
@@ -48,10 +57,10 @@ export default function ConverterInputPanel({
         variant="primary"
         size="lg"
         fullWidth
-        disabled={isLoading}
+        disabled={isDisabled}
         style={{ marginTop: 8, fontSize: 16 }}
       >
-        {isLoading ? 'Converting...' : 'Convert Recipe'}
+        {buttonLabel}
       </Button>
     </div>
   )
