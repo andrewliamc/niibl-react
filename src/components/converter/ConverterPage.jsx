@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { parseRecipeText, scaleIngredients } from '../../utils/recipe'
 import { saveRecipe } from '../../utils/storage'
-import { extractTextFromImage, extractTextFromPdf } from '../../utils/ocr'
 import ConverterLayout from './ConverterLayout'
 import ConverterInputPanel from './ConverterInputPanel'
 import ConverterOutputPanel from './ConverterOutputPanel'
@@ -23,6 +22,17 @@ export default function ConverterPage() {
     [originalServings, targetServings],
   )
 
+  const readFileAsDataUrl = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : ''
+        return result ? resolve(result) : reject(new Error('Unable to read that file'))
+      }
+      reader.onerror = () => reject(new Error('Unable to read that file'))
+      reader.readAsDataURL(file)
+    })
+
   const handleFileChange = async (file) => {
     setUploadedFile(file)
     setOcrError('')
@@ -34,20 +44,30 @@ export default function ConverterPage() {
     }
 
     setIsOcrRunning(true)
-    setOcrStatus('Preparing file...')
+    setOcrStatus('Reading file...')
 
     try {
-      const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
-      const text = isPdf
-        ? await extractTextFromPdf(file, setOcrStatus)
-        : await extractTextFromImage(file, setOcrStatus)
+      const imageBase64 = await readFileAsDataUrl(file)
+      setOcrStatus('Sending to OCR...')
 
-      const cleanedText = text.trim()
-      setRecipeText(cleanedText)
-      setOcrStatus(cleanedText ? 'Text captured from your upload.' : 'No text detected—try another file.')
+      const response = await fetch('/api/ocr-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64 }),
+      })
+
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok || payload.error) {
+        throw new Error(payload.error || 'We could not process that file. Please try again.')
+      }
+
+      const text = (payload.normalizedText || payload.rawText || '').trim()
+      setRecipeText(text)
+      setOcrStatus(text ? 'Text captured from your upload.' : 'No text detected—try another file.')
     } catch (error) {
       console.error(error)
-      setOcrError('We could not read that file. Try a clearer scan or another file.')
+      setOcrError(error.message || 'We could not process that file. Please try again.')
       setOcrStatus('')
     } finally {
       setIsOcrRunning(false)
