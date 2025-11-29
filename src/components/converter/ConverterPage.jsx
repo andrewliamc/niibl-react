@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { parseRecipeText, scaleIngredients } from '../../utils/recipe'
 import { saveRecipe } from '../../utils/storage'
+import { extractTextFromImage, extractTextFromPdf } from '../../utils/ocr'
 import ConverterLayout from './ConverterLayout'
 import ConverterInputPanel from './ConverterInputPanel'
 import ConverterOutputPanel from './ConverterOutputPanel'
@@ -13,11 +14,45 @@ export default function ConverterPage() {
   const [targetServings, setTargetServings] = useState(6)
   const [recipe, setRecipe] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isOcrRunning, setIsOcrRunning] = useState(false)
+  const [ocrStatus, setOcrStatus] = useState('')
+  const [ocrError, setOcrError] = useState('')
 
   const ratio = useMemo(
     () => (originalServings > 0 ? targetServings / originalServings : 1),
     [originalServings, targetServings],
   )
+
+  const handleFileChange = async (file) => {
+    setUploadedFile(file)
+    setOcrError('')
+
+    if (!file) {
+      setRecipeText('')
+      setOcrStatus('')
+      return
+    }
+
+    setIsOcrRunning(true)
+    setOcrStatus('Preparing file...')
+
+    try {
+      const isPdf = file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')
+      const text = isPdf
+        ? await extractTextFromPdf(file, setOcrStatus)
+        : await extractTextFromImage(file, setOcrStatus)
+
+      const cleanedText = text.trim()
+      setRecipeText(cleanedText)
+      setOcrStatus(cleanedText ? 'Text captured from your upload.' : 'No text detected—try another file.')
+    } catch (error) {
+      console.error(error)
+      setOcrError('We could not read that file. Try a clearer scan or another file.')
+      setOcrStatus('')
+    } finally {
+      setIsOcrRunning(false)
+    }
+  }
 
   const handleConvert = () => {
     setIsLoading(true)
@@ -78,7 +113,10 @@ export default function ConverterPage() {
             onModeChange={setInputMode}
             recipeText={recipeText}
             onRecipeTextChange={setRecipeText}
-            onFileChange={setUploadedFile}
+            onFileChange={handleFileChange}
+            ocrStatus={ocrStatus}
+            ocrError={ocrError}
+            isOcrRunning={isOcrRunning}
             originalServings={originalServings}
             targetServings={targetServings}
             onOriginalChange={setOriginalServings}
